@@ -1,52 +1,96 @@
 # Thebrandopedia API
 
-Local Express and MongoDB API for the Home feed and Discover connections.
+Express and MongoDB backend for Thebrandopedia's Home feed and Discover connections. This repository contains the backend; the Expo app is maintained separately.
 
-## Run locally
+## Prerequisites
 
-1. Install and start MongoDB locally.
-2. In this directory, copy `.env.example` to `.env` and set `MONGODB_URI` if needed.
-3. Install dependencies and insert the seed data:
+- Node.js 18 or later and npm
+- MongoDB Community Server running locally, or a MongoDB Atlas connection string
+- The Expo app project, if you want to run the mobile or web app
+
+## Set up MongoDB
+
+For a local database, install MongoDB Community Server and start the MongoDB service. On Windows, if it was installed as a Windows service, you can start it from an elevated PowerShell window:
+
+```powershell
+Start-Service MongoDB
+```
+
+The default local connection string is `mongodb://127.0.0.1:27017/thebrandopedia`. MongoDB creates the `thebrandopedia` database and its collections when the seed script first writes data.
+
+Alternatively, create a database in MongoDB Atlas and use its connection string, including the database name, as `MONGODB_URI`.
+
+## Run the backend
+
+From this repository's root directory:
+
+1. Install the dependencies:
 
    ```sh
    npm install
+   ```
+
+2. Create `.env` from the example. In PowerShell:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   The example configures the local MongoDB URI and port `3000`. If you use Atlas or another port, edit `.env`:
+
+   ```dotenv
+   MONGODB_URI=mongodb://127.0.0.1:27017/thebrandopedia
+   PORT=3000
+   ```
+
+3. Load the sample users and posts:
+
+   ```sh
    npm run seed
    ```
 
-4. Start the API:
+   The seed script can be run again safely: it upserts the same five users and five posts and does not remove existing connection requests.
+
+4. Start the API in development mode:
 
    ```sh
    npm run dev
    ```
 
-The API listens on `http://localhost:3000`. `GET /health` can be used to check the server.
-The seed script is repeatable: it upserts the same five user and post IDs, and leaves existing
-connection requests intact.
+   The API listens on `http://localhost:3000` by default. Use `npm start` to run it without Node's watch mode. Check that it is available at `http://localhost:3000/health`.
 
-## Endpoints
+## Run the app
 
-- `GET /users` returns all users and a `requestedUserIds` array for the first seeded user.
-  Optionally pass `?currentUserId=<id>` to return the request state for another user. The app uses
-  the requested IDs to restore the Request/Requested state after reloading.
-- `GET /posts` returns posts newest first, with the author populated as a user object.
-- `POST /connect` accepts `{ "fromUserId": "...", "toUserId": "..." }`. Requests are unique per
-  sender/recipient pair; repeating a request does not create another record.
+The Expo app is not included in this repository. In the app project's directory, set `EXPO_PUBLIC_API_URL` to an address the app can use to reach the backend, then start Expo with `npx expo start`.
 
-## App connection
+The app uses the first seeded user's ID (`64a000000000000000000001`) as its current user. The seeded profile and post image values are filenames for images bundled with the app.
 
-The Expo app uses the first seeded user's ID (`64a000000000000000000001`) as its current user.
-Set `EXPO_PUBLIC_API_URL` before starting Expo to point the app at the API:
+Use the appropriate API address for the device running the app:
 
-- Web: `http://localhost:3000`
-- Android emulator: `http://10.0.2.2:3000`
-- Physical device: `http://<your-computer-LAN-IP>:3000`
+| App target | `EXPO_PUBLIC_API_URL` |
+| --- | --- |
+| Web on the same computer | `http://localhost:3000` |
+| Android emulator | `http://10.0.2.2:3000` |
+| Physical device on the same network | `http://<your-computer-LAN-IP>:3000` |
 
-Example for PowerShell:
+For example, from the app project's root in PowerShell, start the backend first, then run:
 
 ```powershell
 $env:EXPO_PUBLIC_API_URL = "http://10.0.2.2:3000"
-npm run start
+npx expo start
 ```
 
-The profile and post image fields are filenames from the app's existing `assets` folders; the app
-uses these filenames to display the bundled images.
+For a physical device, use the computer's LAN IP instead of `10.0.2.2` and make sure the phone and computer are on the same network. The API binds to `0.0.0.0` so it can accept connections from other devices.
+
+## API endpoints
+
+- `GET /health` reports whether the API is available.
+- `GET /users` returns users and the `requestedUserIds` for the first seeded user. Pass `?currentUserId=<id>` to get request state for another user.
+- `GET /posts` returns posts newest first, with each author populated.
+- `POST /connect` accepts `{ "fromUserId": "...", "toUserId": "..." }`. Repeating a request for the same sender and recipient does not create a duplicate.
+
+Run the backend tests with:
+
+```sh
+npm test
+```
