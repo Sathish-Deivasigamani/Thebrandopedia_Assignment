@@ -1,0 +1,3 @@
+const CURRENT_USER_ID = '64a000000000000000000001';
+
+module.exports = { CURRENT_USER_ID };
